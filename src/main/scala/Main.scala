@@ -34,10 +34,14 @@ object Main {
         val deps = dm.dependencies map { _.replace("\"", "\\\"") }
 
         println(s"""    "${slug}" [label="${name}",URL="https://drupal.org/project/${project}"]""")
-        deps map { d => s"""  "${slug}" -> "${d}" """ }
+        deps map { d =>
+          val targetProject = modules.get(d).map(_.project).getOrElse("uninstalled")
+          if (project == targetProject) s"""  ${slug} -> "${d}""""
+          else s"""  "cluster_${project}" -> "cluster_${targetProject}""""
+        }
       }
       println("  }")
-      deps foreach { println _ }
+      deps.toSet foreach { println _ }
     }
     println("  subgraph cluster_uninstalled {")
     println("""    label="Uninstalled"""")
