@@ -14,22 +14,35 @@ object Main {
       m + (dm.slug -> dm)
     }
 
-    println("digraph {")
-    val unfound = modules.flatMap {
+    val uninstalledDependencies = modules.flatMap {
       _._2.dependencies
     }.toSet.filter { m => !modules.isDefinedAt(m) }
-    modules foreach { case ((m, dm)) =>
-      val slug = m.replace("\"", "\\\"")
-      val name = dm.name.replace("\"", "\\\"")
-      val project = dm.project.replace("\"", "\\\"")
-      val deps = dm.dependencies map { _.replace("\"", "\\\"") }
-
-      println(s"""  "${slug}" [label="${name}",URL="https://drupal.org/project/${project}"]""")
-      deps foreach { d => println(s"""  "${slug}" -> "${d}" """) }
+    val projects = modules.foldLeft(Map[String, Map[String, DrupalModule]]()) { case (m, (name, dm)) =>
+      m + (dm.project -> (m.getOrElse(dm.project, Map()) + (name -> dm)))
     }
-    println("  subgraph uninstalled {")
-    // println("""    [label="Uninstalled"]""")
-    unfound foreach { u =>
+
+    println("digraph {")
+    projects foreach { case ((project, mods)) =>
+      println(s"  subgraph cluster_${project} {")
+      println(s"""    label="${project}"""")
+      println("""    graph [style="solid,filled",fillcolor="#DADADA"]""")
+
+      val deps = mods flatMap { case ((m, dm)) =>
+        val slug = m.replace("\"", "\\\"")
+        val name = dm.name.replace("\"", "\\\"")
+        val project = dm.project.replace("\"", "\\\"")
+        val deps = dm.dependencies map { _.replace("\"", "\\\"") }
+
+        println(s"""    "${slug}" [label="${name}",URL="https://drupal.org/project/${project}"]""")
+        deps map { d => s"""  "${slug}" -> "${d}" """ }
+      }
+      println("  }")
+      deps foreach { println _ }
+    }
+    println("  subgraph cluster_uninstalled {")
+    println("""    label="Uninstalled"""")
+    println("""    graph [style="solid,filled",fillcolor="#DADADA"]""")
+    uninstalledDependencies foreach { u =>
       val slug = u.replace("\"", "\\\"")
       println(s"""    "${slug}" [URL="https://drupal.org/project/${slug}"]""")
     }
