@@ -23,7 +23,8 @@ object DrupalModule {
     val slug = filename.substring(0, filename.length - 5)
     val name = config.getOrElse("name", Vector(slug))(0)
     val project =
-      if (slug.startsWith("e_") || slug.startsWith("equiem_")) "equiem"
+      if (config.keys.map { _ startsWith "regions" }.foldLeft(false) { _ || _ }) "theme"
+      else if (slug.startsWith("e_") || slug.contains("equiem")) "equiem"
       else config.getOrElse("project", Vector(slug))(0)
     val dependencies = config.getOrElse("dependencies[]", Vector()) map { dep =>
       dep.split(" ", 2)(0)
