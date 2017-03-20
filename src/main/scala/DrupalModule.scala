@@ -6,7 +6,7 @@ import scala.collection.JavaConverters._
 object DrupalModule {
   private val utf8 = Charset forName "UTF-8"
 
-  def fromFile(file: Path): DrupalModule = {
+  def fromFile(file: Path): DrupalModule[String] = {
     val lines = Files.readAllLines(file, utf8).asScala
     val filename = file.getFileName.toString
     val slug = filename.substring(0, filename.length - 5)
@@ -14,10 +14,10 @@ object DrupalModule {
     fromLines(slug, lines)
   }
 
-  def fromString(slug: String, contents: String): DrupalModule =
+  def fromString(slug: String, contents: String): DrupalModule[String] =
     fromLines(slug, contents.lines.toSeq)
 
-  def fromLines(slug: String, lines: Seq[String]): DrupalModule = {
+  def fromLines(slug: String, lines: Seq[String]): DrupalModule[String] = {
     val config = parseConfig(lines)
     val name = config.getOrElse("name", Vector(slug))(0)
     val project =
@@ -50,4 +50,7 @@ object DrupalModule {
     }
 }
 
-case class DrupalModule(slug: String, name: String, project: String, dependencies: IndexedSeq[String])
+case class DrupalModule[T](slug: String, name: String, project: String, dependencies: IndexedSeq[T]) {
+  def mapDependencies[U](f: T => U): DrupalModule[U] =
+    copy(dependencies = dependencies.map(f))
+}

@@ -9,16 +9,26 @@ object Main {
       else Paths.get("./")
 
     val modules = Files.walk(start).iterator().asScala.filter { f =>
-      f.getFileName().toString.endsWith(".info")
-    }.map { DrupalModule fromFile _ }.foldLeft(Map[String, DrupalModule]()) { (m, dm) =>
+      f.getFileName.toString.endsWith(".info")
+    }.map {
+      DrupalModule.fromFile
+    }.foldLeft(Map[String, DrupalModule[String]]()) { (m, dm) =>
       m + (dm.slug -> dm)
     }
-
     val uninstalledDependencies = modules.flatMap {
       _._2.dependencies
-    }.toSet.filter { m => !modules.isDefinedAt(m) }
-    val projects = modules.foldLeft(Map[String, Map[String, DrupalModule]]().withDefault(_ => Map())) {
-      case (m: Map[String, Map[String, DrupalModule]], (name, dm)) =>
+    }.toSet.filter { m =>
+      !modules.isDefinedAt(m)
+    }.foldLeft(Map[String, DrupalModule[String]]()) { (m, dm) =>
+      m + (dm -> DrupalModule(dm, dm, dm, Vector()))
+    }
+
+    val graph = modules.map {
+      _._2.mapDependencies(dep => (modules orElse uninstalledDependencies)(dep))
+    }
+
+    val projects = modules.foldLeft(Map[String, Map[String, DrupalModule[String]]]().withDefault(_ => Map())) {
+      case (m: Map[String, Map[String, DrupalModule[String]]], (name, dm)) =>
         m + (dm.project -> (m(dm.project) + (name -> dm)))
     }
 
@@ -42,12 +52,12 @@ object Main {
         }
       }
       println("  }")
-      deps.toSet foreach { println _ }
+      deps.toSet foreach { println }
     }
     println("  subgraph cluster_uninstalled {")
     println("""    label="Uninstalled"""")
     println("""    graph [style="solid,filled",fillcolor="#DADADA"]""")
-    uninstalledDependencies foreach { u =>
+    uninstalledDependencies foreach { case ((u, dm)) =>
       val slug = u.replace("\"", "\\\"")
       println(s"""    "${slug}" [URL="https://drupal.org/project/${slug}"]""")
     }
