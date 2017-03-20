@@ -12,11 +12,11 @@ object DrupalModule {
       !l.startsWith(";") && l.contains("=")
     }.map { l =>
       l.split("=", 2).map { x => x.trim() }
-    }.foldLeft(Map[String, Vector[String]]()) { (m, l) =>
+    }.foldLeft(Map[String, Vector[String]]().withDefault(_ => Vector())) { (m, l) =>
       val v =
         if (l(1).length > 2 && l(1)(0) == '\"') l(1).substring(1, l(1).length - 1)
         else l(1)
-      m + (l(0) -> (m.getOrElse(l(0), Vector()) :+ v))
+      m + (l(0) -> (m(l(0)) :+ v))
     }
 
     val filename = file.getFileName().toString()

@@ -17,8 +17,9 @@ object Main {
     val uninstalledDependencies = modules.flatMap {
       _._2.dependencies
     }.toSet.filter { m => !modules.isDefinedAt(m) }
-    val projects = modules.foldLeft(Map[String, Map[String, DrupalModule]]()) { case (m, (name, dm)) =>
-      m + (dm.project -> (m.getOrElse(dm.project, Map()) + (name -> dm)))
+    val projects = modules.foldLeft(Map[String, Map[String, DrupalModule]]().withDefault(_ => Map())) {
+      case (m: Map[String, Map[String, DrupalModule]], (name, dm)) =>
+        m + (dm.project -> (m(dm.project) + (name -> dm)))
     }
 
     println("digraph {")
