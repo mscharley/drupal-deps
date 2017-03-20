@@ -8,19 +8,17 @@ object DrupalModule {
 
   def fromFile(file: Path): DrupalModule = {
     val lines = Files.readAllLines(file, utf8).asScala
-    val config: Map[String, IndexedSeq[String]] = lines.filter { l =>
-      !l.startsWith(";") && l.contains("=")
-    }.map { l =>
-      l.split("=", 2).map { x => x.trim() }
-    }.foldLeft(Map[String, Vector[String]]().withDefault(_ => Vector())) { (m, l) =>
-      val v =
-        if (l(1).length > 2 && l(1)(0) == '\"') l(1).substring(1, l(1).length - 1)
-        else l(1)
-      m + (l(0) -> (m(l(0)) :+ v))
-    }
-
-    val filename = file.getFileName().toString()
+    val filename = file.getFileName.toString
     val slug = filename.substring(0, filename.length - 5)
+
+    fromLines(slug, lines)
+  }
+
+  def fromString(slug: String, contents: String): DrupalModule =
+    fromLines(slug, contents.lines.toSeq)
+
+  def fromLines(slug: String, lines: Seq[String]): DrupalModule = {
+    val config = parseConfig(lines)
     val name = config.getOrElse("name", Vector(slug))(0)
     val project =
       if (config.keys.map { _ startsWith "regions" }.foldLeft(false) { _ || _ }) "theme"
@@ -32,6 +30,24 @@ object DrupalModule {
 
     DrupalModule(slug, name, project, dependencies)
   }
+
+  private def parseConfig(lines: Seq[String]): Map[String, IndexedSeq[String]] =
+    (filterComments andThen parseLines)(lines)
+
+  private val filterComments: (Seq[String]) => Seq[String] =
+    _.filter { l =>
+      !l.startsWith(";") && l.contains("=")
+    }
+
+  private val parseLines: (Seq[String]) => Map[String, IndexedSeq[String]] =
+    _.map { l =>
+      l.split("=", 2).map { x => x.trim() }
+    }.foldLeft(Map[String, Vector[String]]().withDefault(_ => Vector())) { (m, l) =>
+      val v =
+        if (l(1).length > 2 && l(1)(0) == '\"') l(1).substring(1, l(1).length - 1)
+        else l(1)
+      m + (l(0) -> (m(l(0)) :+ v))
+    }
 }
 
 case class DrupalModule(slug: String, name: String, project: String, dependencies: IndexedSeq[String])
