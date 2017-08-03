@@ -34,9 +34,10 @@ object Main {
         m + (dm -> DrupalModule(dm, dm, dm, Vector()))
       }
 
-    val graph = modules.map {
-      _._2.mapDependencies(dep => (modules orElse uninstalledDependencies)(dep))
-    }
+    val graph =
+      modules.map {
+        _._2.mapDependencies(dep => (modules orElse uninstalledDependencies)(dep))
+      }.toSet
 
     val projects =
       modules.foldLeft(Map[String, Map[String, DrupalModule[String]]]().withDefault(_ => Map())) {
